@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { useState, useEffect } from 'react';
 import Login from './pages/Login';
 import MovieList from './pages/MovieList';
+import MovieRoom from './pages/MovieRoom';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -32,17 +33,21 @@ function App() {
     <Router>
       <div className="min-h-screen bg-gray-900 text-white">
         <Routes>
-          <Route 
-            path="/" 
-            element={user ? <Navigate to="/movies" /> : <Login onLogin={handleLogin} />} 
+          <Route
+            path="/"
+            element={user ? <Navigate to="/movies" /> : <Login onLogin={handleLogin} />}
           />
-          <Route 
-            path="/login" 
-            element={user ? <Navigate to="/movies" /> : <Login onLogin={handleLogin} />} 
+          <Route
+            path="/login"
+            element={user ? <Navigate to="/movies" /> : <Login onLogin={handleLogin} />}
           />
-          <Route 
-            path="/movies" 
-            element={user ? <MovieList user={user} onLogout={handleLogout} /> : <Navigate to="/login" />} 
+          <Route
+            path="/movies"
+            element={user ? <MovieList user={user} onLogout={handleLogout} /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/room/:roomId"
+            element={<MovieRoom user={user} onLogout={handleLogout} />}
           />
         </Routes>
       </div>
