@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import Login from './pages/Login';
 import MovieList from './pages/MovieList';
@@ -27,32 +27,30 @@ function App() {
   };
 
   return (
-    <Router>
-      <div className="min-h-screen bg-gray-900 text-white">
-        <Routes>
-          <Route
-            path="/"
-            element={user ? <Navigate to="/movies" /> : <Login onLogin={handleLogin} />}
-          />
-          <Route
-            path="/login"
-            element={user ? <Navigate to="/movies" /> : <Login onLogin={handleLogin} />}
-          />
-          <Route
-            path="/movies"
-            element={user ? <MovieList user={user} onLogout={handleLogout} /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/room/:roomId"
-            element={<MovieRoom user={user} onLogout={handleLogout} />}
-          />
-          <Route
-            path="/admin"
-            element={<AdminDashboard/>}
-          />
-        </Routes>
-      </div>
-    </Router>
+    <div className="min-h-screen bg-gray-900 text-white">
+      <Routes>
+        <Route
+          path="/"
+          element={user ? <Navigate to="/movies" /> : <Login onLogin={handleLogin} />}
+        />
+        <Route
+          path="/login"
+          element={user ? <Navigate to="/movies" /> : <Login onLogin={handleLogin} />}
+        />
+        <Route
+          path="/movies"
+          element={user ? <MovieList user={user} onLogout={handleLogout} /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/room/:roomId"
+          element={<MovieRoom user={user} onLogout={handleLogout} />}
+        />
+        <Route
+          path="/admin"
+          element={<AdminDashboard />}
+        />
+      </Routes>
+    </div>
   );
 }
 

@@ -108,3 +108,13 @@ password : testtest
 
 after movie room created, copy url and sent to other
 ```
+
+## Live Demo
+
+> 🔗 **Use the deployed apps below:**
+
+- **Main App**  
+  [https://michaeltengganus98.github.io/nafas-theater-frontend/](https://michaeltengganus98.github.io/nafas-theater-frontend/)
+
+- **Admin Dashboard**  
+  [https://michaeltengganus98.github.io/nafas-theater-frontend/admin](https://michaeltengganus98.github.io/nafas-theater-frontend/admin)
