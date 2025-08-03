@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { getUser, getToken } from '../utils/auth'
+import { getToken } from '../utils/auth'
 
 const MovieList = ({ user, onLogout }) => {
   const [movies, setMovies] = useState([]);
@@ -59,17 +59,14 @@ const MovieList = ({ user, onLogout }) => {
             'Authorization': `Bearer ${getToken()}`
           }
         }
-      );      
-
-      console.log('Create Room API Response:', response.data);
+      );
 
       if (response.data.success) {
         navigate(`/room/${response.data.room.id}`);
       }
     } catch (error) {
       console.error('Error creating room:', error);
-      
-      // Handle specific error cases
+
       if (error.response?.data?.message) {
         alert(`Error: ${error.response.data.message}`);
       } else {

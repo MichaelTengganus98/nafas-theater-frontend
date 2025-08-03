@@ -26,7 +26,7 @@ const MovieRoom = ({ user, onLogout }) => {
   const [isHost, setIsHost] = useState(false);
   const videoRef = useRef(null);
   const messagesEndRef = useRef(null);
-  
+
   // Add refs to prevent stale closures
   const socketRef = useRef(null);
   const currentUserRef = useRef(null);
@@ -78,8 +78,6 @@ const MovieRoom = ({ user, onLogout }) => {
       const timer = setTimeout(() => {
         if (window.YT && window.YT.Player) {
           initializeYouTubePlayer();
-        } else {
-          console.log('YouTube API not ready yet, will retry...');
         }
       }, 1000);
 
@@ -147,14 +145,11 @@ const MovieRoom = ({ user, onLogout }) => {
     }
 
     const state = event.data;
-    console.log('Player state changed:', state, 'Socket:', !!socketRef.current);
-    
+
     switch (state) {
       case window.YT.PlayerState.PLAYING:
         setIsPlaying(true);
-        // Only emit if we have socket, user
         if (socketRef.current && currentUserRef.current) {
-          console.log('Emitting play action to other users');
           socketRef.current.emit('movie-action', {
             roomId,
             action: 'play',
@@ -167,9 +162,7 @@ const MovieRoom = ({ user, onLogout }) => {
         break;
       case window.YT.PlayerState.PAUSED:
         setIsPlaying(false);
-        // Only emit if we have socket, user
         if (socketRef.current && currentUserRef.current) {
-          console.log('Emitting pause action to other users');
           socketRef.current.emit('movie-action', {
             roomId,
             action: 'pause',
@@ -196,11 +189,9 @@ const MovieRoom = ({ user, onLogout }) => {
     }
   }, [roomId]);
 
-  // Cleanup socket on unmount
   useEffect(() => {
     return () => {
       if (socketRef.current) {
-        console.log('Disconnecting socket on unmount');
         socketRef.current.disconnect();
       }
     };
@@ -208,21 +199,9 @@ const MovieRoom = ({ user, onLogout }) => {
 
   useEffect(() => {
     if (room && currentUser && !socket) {
-      console.log('Initializing socket for user:', currentUser.name);
       initializeSocket(currentUser);
     }
   }, [room, currentUser, socket]);
-
-  // Debug effect to log state changes
-  useEffect(() => {
-    console.log('Room state changed:', {
-      room: room?.id,
-      currentUser: currentUser?.name,
-      socket: !!socket,
-      isHost,
-      player: !!player
-    });
-  }, [room, currentUser, socket, isHost, player]);
 
   useEffect(() => {
     scrollToBottom();
@@ -230,35 +209,24 @@ const MovieRoom = ({ user, onLogout }) => {
 
   const fetchRoomData = async () => {
     try {
-      console.log('Fetching room data for roomId:', roomId);
       const response = await axios.get(`${import.meta.env.VITE_API_URL}/rooms/${roomId}`);
 
       if (response.data.success) {
-        console.log('Room data received:', response.data.room);
         setRoom(response.data.room);
         setUsers(response.data.room.users || []);
 
-        // If user is logged in, set current user and don't show join modal
         if (user) {
-          console.log('User is logged in:', user);
           setCurrentUser(user);
-          // Check if current user is the host
           const hostStatus = user.id === response.data.room.host?.id;
           setIsHost(hostStatus);
-          console.log('Host status:', hostStatus);
         } else {
-          console.log('User is not logged in, showing join modal');
-          // Only show join modal for non-authenticated users
           setShowJoinModal(true);
         }
       }
     } catch (error) {
-      console.error('Error fetching room:', error);
-      // If room not found, show join modal for non-authenticated users
       if (!user) {
         setShowJoinModal(true);
       } else {
-        // If logged in user but room not found, redirect to movies
         navigate('/movies');
       }
     } finally {
@@ -281,14 +249,11 @@ const MovieRoom = ({ user, onLogout }) => {
         setUsers(response.data.room.users);
         setCurrentUser(response.data.user);
         setShowJoinModal(false);
-        
-        // Check if current user is the host
+
         const hostStatus = response.data.user.id === response.data.room.host?.id;
         setIsHost(hostStatus);
-        console.log('Joined as host:', hostStatus);
       }
     } catch (error) {
-      console.error('Error joining room:', error);
       alert(error.response?.data?.message || 'Failed to join room');
     } finally {
       setJoining(false);
@@ -297,29 +262,23 @@ const MovieRoom = ({ user, onLogout }) => {
 
   const initializeSocket = (userData) => {
     if (!userData) {
-      console.log('No user data provided for socket initialization');
       return;
     }
-    
-    // Prevent multiple socket connections
+
     if (socketRef.current) {
-      console.log('Socket already exists, disconnecting old one');
       socketRef.current.disconnect();
     }
 
-    console.log('Initializing new socket connection for user:', userData.name);
-    const newSocket = io('http://localhost:3000', {
+    const newSocket = io(import.meta.env.VITE_API_URL, {
       query: {
         roomId: roomId,
         userId: userData.id,
         userName: userData.name
       },
-      transports: ['websocket', 'polling'] // Ensure multiple transport methods
+      transports: ['websocket', 'polling']
     });
 
     newSocket.on('connect', () => {
-      console.log('Connected to socket server with ID:', newSocket.id);
-      // Join the room via socket
       newSocket.emit('join-room', {
         roomId: roomId,
         username: userData.name,
@@ -336,7 +295,6 @@ const MovieRoom = ({ user, onLogout }) => {
     });
 
     newSocket.on('user-joined', (data) => {
-      console.log('User joined:', data);
       setUsers(prev => {
         const existingUser = prev.find(u => u.id === data.user.id);
         if (!existingUser) {
@@ -345,16 +303,15 @@ const MovieRoom = ({ user, onLogout }) => {
         return prev;
       });
       setMessages(prev => {
-        // Check if join message already exists
-        const joinMessageExists = prev.some(msg => 
-          msg.type === 'system' && 
+        const joinMessageExists = prev.some(msg =>
+          msg.type === 'system' &&
           msg.message === `${data.user.name} joined the room`
         );
-        
+
         if (joinMessageExists) {
           return prev;
         }
-        
+
         return [...prev, {
           id: Date.now(),
           type: 'system',
@@ -364,42 +321,38 @@ const MovieRoom = ({ user, onLogout }) => {
     });
 
     newSocket.on('user-left', (data) => {
-      console.log('User left:', data);
       setUsers(prev => prev.filter(u => u.id !== data.userId));
       setMessages(prev => {
-        // Check if leave message already exists
-        const leaveMessageExists = prev.some(msg => 
-          msg.type === 'system' && 
-          msg.message === `${data.userName} left the room`
+        const leaveMessageExists = prev.some(msg =>
+          msg.type === 'system' &&
+          msg.message === data.message
         );
-        
+
         if (leaveMessageExists) {
           return prev;
         }
-        
+
         return [...prev, {
           id: Date.now(),
           type: 'system',
-          message: `${data.userName} left the room`
+          message: data.message
         }];
       });
     });
 
     newSocket.on('chat-message', (data) => {
-      console.log('New message:', data);
       setMessages(prev => {
-        // Check if message already exists to prevent duplicates
-        const messageExists = prev.some(msg => 
-          msg.userId === data.user.id && 
-          msg.message === data.message && 
+        const messageExists = prev.some(msg =>
+          msg.userId === data.user.id &&
+          msg.message === data.message &&
           Math.abs(new Date(msg.timestamp).getTime() - new Date(data.timestamp).getTime()) < 1000
         );
-        
+
         if (messageExists) {
           console.log('Duplicate message detected, skipping');
           return prev;
         }
-        
+
         return [...prev, {
           id: Date.now(),
           userId: data.user.id,
@@ -411,8 +364,6 @@ const MovieRoom = ({ user, onLogout }) => {
     });
 
     newSocket.on('movie-action', (data) => {
-      console.log('Movie action received:', data);
-      // Don't handle actions from ourselves
       if (data.user?.id === userData.id) {
         console.log('Ignoring action from self');
         return;
@@ -420,27 +371,12 @@ const MovieRoom = ({ user, onLogout }) => {
       handleRemoteAction(data);
     });
 
-    // Test socket connection
-    newSocket.on('test-response', (data) => {
-      console.log('Test response received:', data);
-    });
-
-    // Send test message after connection
-    newSocket.on('connect', () => {
-      setTimeout(() => {
-        newSocket.emit('test-message', { message: 'Socket test from client' });
-      }, 1000);
-    });
-
     setSocket(newSocket);
     socketRef.current = newSocket;
   };
 
   const handleRemoteAction = (data) => {
-    console.log('Handling remote action:', data, 'Player available:', !!playerRef.current);
-    
     if (!playerRef.current) {
-      console.log('No player available for remote action');
       return;
     }
 
@@ -450,24 +386,20 @@ const MovieRoom = ({ user, onLogout }) => {
     try {
       switch (data.action) {
         case 'play':
-          console.log('Executing remote play');
           playerRef.current.playVideo();
           setIsPlaying(true);
           break;
         case 'pause':
-          console.log('Executing remote pause');
           playerRef.current.pauseVideo();
           setIsPlaying(false);
           break;
         case 'seek':
           const time = data.data?.time || 0;
-          console.log('Executing remote seek to:', time);
           playerRef.current.seekTo(time, true);
           setCurrentTime(time);
           break;
         case 'sync':
           const syncTime = data.data?.time || 0;
-          console.log('Executing remote sync to:', syncTime);
           playerRef.current.seekTo(syncTime, true);
           setCurrentTime(syncTime);
           break;
@@ -475,7 +407,6 @@ const MovieRoom = ({ user, onLogout }) => {
     } catch (error) {
       console.error('Error handling remote action:', error);
     } finally {
-      // Reset flag after a short delay to allow state changes to propagate
       setTimeout(() => {
         isHandlingRemoteAction.current = false;
       }, 500);
@@ -493,19 +424,15 @@ const MovieRoom = ({ user, onLogout }) => {
       timestamp: new Date().toISOString()
     };
 
-    console.log('Sending message:', messageData);
     socketRef.current.emit('chat-message', messageData);
     setNewMessage('');
   };
 
   const handlePlayPause = () => {
     if (!playerRef.current) {
-      console.log('No player available for play/pause');
       return;
     }
 
-    console.log('Manual play/pause triggered, current state:', isPlaying);
-    
     if (isPlaying) {
       playerRef.current.pauseVideo();
     } else {
@@ -515,19 +442,16 @@ const MovieRoom = ({ user, onLogout }) => {
 
   const handleSeek = (e) => {
     if (!playerRef.current) return;
-    
+
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const width = rect.width;
     const seekTime = (clickX / width) * duration;
-    
-    console.log('Manual seek to:', seekTime);
+
     playerRef.current.seekTo(seekTime, true);
     setCurrentTime(seekTime);
 
-    // Emit seek action to other users
     if (socketRef.current && currentUserRef.current) {
-      console.log('Emitting seek action');
       socketRef.current.emit('movie-action', {
         roomId,
         action: 'seek',
@@ -540,11 +464,9 @@ const MovieRoom = ({ user, onLogout }) => {
 
   const handleSync = () => {
     if (!playerRef.current || !socketRef.current || !currentUserRef.current) return;
-    
+
     const currentVideoTime = playerRef.current.getCurrentTime();
-    console.log('Manual sync triggered, current time:', currentVideoTime);
-    
-    // Emit sync action to other users
+
     socketRef.current.emit('movie-action', {
       roomId,
       action: 'sync',
@@ -554,7 +476,6 @@ const MovieRoom = ({ user, onLogout }) => {
     });
   };
 
-  // Update current time periodically
   useEffect(() => {
     const interval = setInterval(() => {
       if (playerRef.current && isPlaying) {
@@ -736,7 +657,7 @@ const MovieRoom = ({ user, onLogout }) => {
                       <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                       <div className="text-xl">Loading video...</div>
                       <div className="text-sm text-gray-400 mt-2">{room.movie.title}</div>
-                      <button 
+                      <button
                         onClick={() => initializeYouTubePlayer()}
                         className="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
                       >
@@ -766,9 +687,9 @@ const MovieRoom = ({ user, onLogout }) => {
                 >
                   <span className="text-xl">{isPlaying ? '⏸️' : '▶️'}</span>
                 </button>
-                
+
                 <div className="flex-1 relative">
-                  <div 
+                  <div
                     className="bg-white/20 rounded-full h-2 backdrop-blur-sm cursor-pointer"
                     onClick={handleSeek}
                   >
@@ -778,11 +699,11 @@ const MovieRoom = ({ user, onLogout }) => {
                     ></div>
                   </div>
                 </div>
-                
+
                 <span className="text-white text-sm font-medium bg-black/50 backdrop-blur-sm px-3 py-1 rounded-full">
                   {formatTime(currentTime)} / {formatTime(duration)}
                 </span>
-                
+
                 {isHost && (
                   <button
                     onClick={handleSync}

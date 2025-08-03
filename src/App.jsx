@@ -3,29 +3,26 @@ import { useState, useEffect } from 'react';
 import Login from './pages/Login';
 import MovieList from './pages/MovieList';
 import MovieRoom from './pages/MovieRoom';
+import AdminDashboard from './pages/AdminDashboard';
 
 function App() {
   const [user, setUser] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
     if (savedUser) {
       const userData = JSON.parse(savedUser);
       setUser(userData);
-      setIsAdmin(userData.role === 'admin');
     }
   }, []);
 
   const handleLogin = (userData) => {
     setUser(userData);
-    setIsAdmin(userData.role === 'admin');
     localStorage.setItem('user', JSON.stringify(userData));
   };
 
   const handleLogout = () => {
     setUser(null);
-    setIsAdmin(false);
     localStorage.removeItem('user');
   };
 
@@ -48,6 +45,10 @@ function App() {
           <Route
             path="/room/:roomId"
             element={<MovieRoom user={user} onLogout={handleLogout} />}
+          />
+          <Route
+            path="/admin"
+            element={<AdminDashboard/>}
           />
         </Routes>
       </div>
